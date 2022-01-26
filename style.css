@@ -48,6 +48,10 @@ nav h1 {
 .menubar .menubar-item:hover {
   background: #626262;
 }
+.menubar .parent.disabled > .menubar-item {
+  color: #888;
+  cursor: default;
+}
 .menubar .parent {
   position: relative;
 }
@@ -61,7 +65,7 @@ nav h1 {
   display: none;
   flex-direction: column;
   position: absolute;
-  top: 2.2rem;
+  top: 2rem;
   left: 0;
   width: max-content;
   background: #505050;
