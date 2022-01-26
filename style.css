@@ -8,42 +8,85 @@ body {
   margin: 0;
 }
 nav {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
   background: #505050;
-  width: 100vw;
-  padding: 0.5rem;
+  padding-left: env(titlebar-area-x, 0);
+  padding-top: env(titlebar-area-y, 0);
+  padding-right: calc(env(titlebar-area-x) + env(titlebar-area-width));
+  min-height: env(titlebar-area-height, 2rem);
   box-sizing: border-box;
-  box-shadow: rgba(0,0,0,0.25) 0 0 0.25em;
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 nav h1 {
   font-size: 1rem;
   margin: 0;
   margin-right: 1em;
 }
-nav a {
+.menubar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100vw;
+  padding: 0.5rem;
+  box-sizing: border-box;
+  box-shadow: rgba(0,0,0,0.25) 0 0 0.25em;
+}
+.menubar hr {
+  display: inline-block;
+  height: 3rem;
+  border: none;
+  border-left: #ccc solid 1px;
+  margin: 0 1rem;
+}
+.menubar .menubar-item {
+  display: inline-block;
   padding: 0.5rem;
   background: #505050;
   color: #ccc;
   text-decoration: none;
 }
-nav a:hover {
+.menubar .menubar-item:hover {
   background: #626262;
 }
-nav .parent {
+.menubar .parent {
   position: relative;
-  background: #505050;
 }
-nav .parent:focus-within > .dropdown {
+/* hacks required to make these menus accessible */
+.menubar:focus-within .parent:hover > .dropdown,
+.menubar-item:focus-visible + .dropdown,
+.parent:focus-within > .menubar-item:not(:focus) + .dropdown {
   display: flex;
 }
-nav .dropdown {
+.menubar .dropdown {
   display: none;
   flex-direction: column;
   position: absolute;
-  top: 1.7rem;
+  top: 2.2rem;
   left: 0;
   width: max-content;
+  background: #505050;
   box-shadow: rgba(0,0,0,0.25) 0 0 0.25em;
+  z-index: 100;
+}
+.menubar .dropdown hr {
+  height: 0;
+  width: 100%;
+  border-left: none;
+  border-top: #ccc solid 1px;
+  margin: 0.25rem 0;
+}
+
+.hero {
+  background: #272727;
+  padding: 1rem;
+}
+.hero .menubar-item {
+  background: #272727;
+}
+.hero .menubar-item:hover {
+  background: #404040;
+}
+.hero .dropdown {
+  top: 3.5rem;
+  background: #272727;
 }

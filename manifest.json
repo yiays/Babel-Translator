@@ -1,0 +1,10 @@
+{
+  "name": "Babel Translator",
+  "start_url": "/",
+  "background_color": "#1E1E1E",
+  "display": "fullscreen",
+  "display_override": ["window-controls-overlay"],
+  "scope": "/",
+  "theme_color": "#505050",
+  "description": "A translation tool for working with files in the babel-lang format."
+}
