@@ -17,7 +17,7 @@
     <nav class="menubar">
       <h1>Babel Translator</h1>
       <div class="parent">
-        <a href="#" class="menubar-item">File</a>
+        <a href="#" class="menubar-item" data-action="none">File</a>
         <div class="dropdown">
           <a href="#" class="menubar-item" data-action="open-file">Open file</a>
           <a href="#" class="menubar-item" data-action="open-file-url">Open URL</a>
@@ -26,13 +26,13 @@
         </div>
       </div>
       <div class="parent">
-        <a href="#" class="menubar-item">View</a>
+        <a href="#" class="menubar-item" data-action="none">View</a>
         <div class="dropdown">
-          <a href="#" class="menubar-item" data-action="split-view">Splitscreen</a>
+          <a href="#" class="menubar-item" data-action="split-view">&#10003;&#10007; Compare mode</a>
         </div>
       </div>
       <div class="parent">
-        <a href="#" class="menubar-item">Help</a>
+        <a href="#" class="menubar-item" data-action="none">Help</a>
         <div class="dropdown">
           <a href="https://github.com/yiays/Babel-Translator/blob/main/README.md" target="_blank" class="menubar-item">
             About
@@ -44,7 +44,7 @@
 
     <div class="hero menubar">
       <div class="parent">
-        <a href="#" class="menubar-item">
+        <a href="#" class="menubar-item" data-action="none">
           <b>Project</b>
           <br><sub class="projstate">None selected</sub>
           <span class="menubar-item-symbols">&darr;</span>
@@ -62,7 +62,7 @@
       </div>
       <hr>
       <div class="parent disabled">
-        <a href="#" class="menubar-item">
+        <a href="#" class="menubar-item" data-action="none">
           <b>Language</b>
           <br><sub class="langstate">N/A</sub>
           <span class="menubar-item-symbols">&darr;</span>
@@ -77,6 +77,30 @@
         </div>
       </div>
 
+    </div>
+
+    <div class="editor">
+      <div class="section menubar">
+        <div class="parent collapsible-parent closed">
+          <a href="#" class="menubar-item" data-action="toggle-section">
+            <span class="dim">[</span>meta<span class="dim">]</span>
+          </a>
+          <div class="collapsible">
+            <a href="#" class="menubar-item" data-action="select-string">
+              name
+            </a>
+            <a href="#" class="menubar-item" data-action="select-string">
+              inherit
+            </a>
+            <a href="#" class="menubar-item" data-action="select-string">
+              contributors
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="translator">
+        Translator
+      </div>
     </div>
 
     <script src="https://cdn.yiays.com/jquery-3.6.0.min.js"></script>

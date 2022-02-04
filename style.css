@@ -7,6 +7,17 @@ body {
   padding: 0;
   margin: 0;
 }
+
+.disabled > *,.dim {
+  color: #888!important;
+}
+.preview {
+  display: block;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 nav {
   background: #505050;
   padding-left: env(titlebar-area-x, 0);
@@ -15,7 +26,7 @@ nav {
   min-height: env(titlebar-area-height, 2rem);
   box-sizing: border-box;
   -webkit-app-region: drag;
-  app-region: drag;
+  /* app-region: drag; - coming soon */
 }
 nav h1 {
   font-size: 1rem;
@@ -45,11 +56,13 @@ nav h1 {
   color: #ccc;
   text-decoration: none;
 }
+.menubar .menubar-item > * {
+  pointer-events: none;
+}
 .menubar .menubar-item:hover {
   background: #626262;
 }
 .menubar .parent.disabled > .menubar-item {
-  color: #888;
   cursor: default;
 }
 .menubar .parent {
@@ -93,4 +106,36 @@ nav h1 {
 .hero .dropdown {
   top: 3.5rem;
   background: #272727;
+}
+
+.editor {
+  display: grid;
+  grid-template-columns: 20rem 1fr;
+  height: calc(100vh - 8.6rem);
+}
+.editor .section {
+  flex-direction: column;
+  width: auto;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.editor .section .parent {
+  width: 100%;
+}
+.editor .section .menubar-item {
+  display: block;
+}
+.editor .section .collapsible {
+  padding-left: 2rem;
+}
+
+.collapsible-parent > .menubar-item::before {
+  content: '\25BE ';
+}
+.collapsible-parent.closed > .menubar-item::before {
+  content: '\25B8 ';
+}
+.collapsible-parent.closed>.collapsible {
+  display: none;
 }

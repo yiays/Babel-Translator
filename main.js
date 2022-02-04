@@ -19,14 +19,18 @@ let projects = [
 let currentproject = -1;
 let currentlang = '';
 
-const textdecoder = new TextDecoder('utf-8');
+let textdecoder;
+if('TextDecoder' in window) {
+  textdecoder = new TextDecoder('utf-8');
+} else {
+  alert("This browser isn't supported!");
+}
 
 $().ready(() => {
   $('body').on('click', '.menubar .menubar-item', (e) => {
     if(e.target.getAttribute('href') == '#') e.preventDefault();
-  });
+    if(e.target.dataset.action == 'none') return;
 
-  $('body').on('click', '.dropdown .menubar-item', (e) => {
     document.activeElement.blur();
 
     switch (e.target.dataset.action) {
@@ -40,6 +44,10 @@ $().ready(() => {
       case 'select-language':
         currentlang = e.target.dataset.id;
         $('.langstate').text(currentlang);
+        update_sectionlist();
+        break;
+      case 'toggle-section':
+        $(e.target).parent().toggleClass('closed');
         break;
       default:
         console.warn(`No handler defined for action event ${e.target.dataset.action}`);
@@ -71,57 +79,100 @@ function update_languagelist() {
   if(currentproject < 0) {
     $('.languagelist').parent().addClass('disabled');
     $('.langstate').text("N/A");
-  }else{
-    const project = projects[currentproject];
-    currentlang = -1;
-
-    if(Object.keys(project.langs).length == 0) {
-      $('.langstate').text('Loading...');
-      $.get(project.langurl, (babeldata) => {
-        let babelfiles = babeldata.tree;
-        let promises = [];
-        babelfiles.forEach(babelfile => {
-          if(babelfile.path.startsWith(project.prefix) && babelfile.type == 'blob') {
-            promises.push($.get(babelfile.url, (data) => {
-              const rawdata = textdecoder.decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
-              const parseddata = parseINIString(rawdata);
-              console.log(parseddata);
-              projects[currentproject].langs[babelfile.path.slice(project.prefix.length, -4)] = parseddata;
-            }));
-          }
-        });
-
-        Promise.all(promises).then((_) => {
-          if(Object.keys(projects[currentproject].langs).length == 0) {
-            $('.langstate').text('Load failed!');
-            return;
-          }
-          update_languagelist();
-        })
-      });
-      return;
-    }
-
-    $('.languagelist').parent().removeClass('disabled');
-    $('.langstate').text('None selected');
-
-    for(const [langname, lang] of Object.entries(projects[currentproject].langs)) {
-      const progress = calculate_progress(project, langname);
-      $('.languagelist').append(`
-        <a href="#" class="menubar-item" data-action="select-language" data-id="${langname}">
-          ${lang['meta']['name']}
-          <br><progress value=${progress} max=100>${progress}%</progress>
-        </a>
-      `);
-    };
+    return
   }
+  const project = projects[currentproject];
+  currentlang = -1;
+
+  if(Object.keys(project.langs).length == 0) {
+    $('.langstate').text('Loading...');
+    $.get(project.langurl, (babeldata) => {
+      let babelfiles = babeldata.tree;
+      let promises = [];
+      babelfiles.forEach(babelfile => {
+        if(babelfile.path.startsWith(project.prefix) && babelfile.type == 'blob') {
+          promises.push($.get(babelfile.url, (data) => {
+            const rawdata = textdecoder.decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
+            const parseddata = parseINIString(rawdata);
+            console.log(parseddata);
+            projects[currentproject].langs[babelfile.path.slice(project.prefix.length, -4)] = parseddata;
+          }));
+        }
+      });
+
+      Promise.all(promises).then((_) => {
+        if(Object.keys(projects[currentproject].langs).length == 0) {
+          $('.langstate').text('Load failed!');
+          return;
+        }
+        update_languagelist();
+      })
+    });
+    return;
+  }
+
+  $('.languagelist').parent().removeClass('disabled');
+  $('.langstate').text('None selected');
+
+  for(const [langname, lang] of Object.entries(projects[currentproject].langs)) {
+    const progress = calculate_progress(project, langname);
+    $('.languagelist').append(`
+      <a href="#" class="menubar-item" data-action="select-language" data-id="${langname}">
+        ${lang['meta']['name']}
+        <br><progress value=${progress} max=100>${progress}%</progress>
+      </a>
+    `);
+  };
 }
 
 function calculate_progress(project, lang) {
   if(lang == project.base) {
     return 100;
   }
-  return 0; // Stub
+
+  var refcount = 0;
+  var fieldcount = 0;
+  Object.keys(project.langs[project.base]).forEach(section => {
+    if(section in project.langs[lang]) {
+      Object.keys(project.langs[project.base][section]).forEach(key => {
+        refcount++;
+        if(key in project.langs[lang][section]) fieldcount++;
+      });
+    }else{
+      refcount += Object.keys(project.langs[project.base]).length;
+    }
+  });
+  return (fieldcount/refcount)*100; // TODO: Add support for inheritance
+}
+
+function update_sectionlist() {
+  $('.editor .section').html('');
+  if(currentlang < 0) {
+    $('.editor .section').append(`<i>Select a language</i>`);
+    return
+  }
+  const project = projects[currentproject];
+  const language = project.langs[currentlang];
+
+  Object.keys(language).forEach(section => {
+    let out = `
+      <div class="parent collapsible-parent closed">
+        <a href="#" class="menubar-item" data-action="toggle-section">
+          ${section}
+        </a>
+        <div class="collapsible">`;
+    Object.keys(language[section]).forEach(key => {
+      out += `
+          <a href="#" class="menubar-item" data-action="select-string" data-id="${section+'/'+key}}">
+            ${key}
+            <br><span class="dim preview">${language[section][key].substring(0, 50)}</span>
+          </a>`;
+    });
+    out += `
+        </div>
+      </div>`;
+    $('.editor .section').append(out);
+  });
 }
 
 /*
