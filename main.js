@@ -49,12 +49,29 @@ $().ready(() => {
       case 'toggle-section':
         $(e.target).parent().toggleClass('closed');
         break;
+      case 'select-string':
+        const project = projects[currentproject];
+        const language = project.langs[currentlang];
+        const baselang = project.langs[project.base];
+        let inheritlang;
+        if(language['meta']['inherit'] && language['meta']['inherit'].startsWith(project.prefix)) {
+          inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)];
+        }
+        let kv = e.target.dataset.id.split('/');
+
+        let [value, state] = resolve_key_state(baselang, null, kv[0], kv[1]);
+        $('#basestring').text(value);
+
+        [value, state] = resolve_key_state(language, inheritlang, kv[0], kv[1]);
+        $('#transstring').text(state=='valid'||state=='inherited'?value:'');
+        break;
       default:
         console.warn(`No handler defined for action event ${e.target.dataset.action}`);
         break;
     }
   });
 
+  // Setup while fetching projects
   $('.projstate').text("None selected");
   $('.projectlist').html('');
   $('.langstate').text("N/A");
@@ -72,6 +89,7 @@ $().ready(() => {
       projects[i].langurl = babeltree.url;
     });
   }
+  update_sectionlist();
 });
 
 function update_languagelist() {
@@ -82,7 +100,8 @@ function update_languagelist() {
     return
   }
   const project = projects[currentproject];
-  currentlang = -1;
+  currentlang = '';
+  update_sectionlist();
 
   if(Object.keys(project.langs).length == 0) {
     $('.langstate').text('Loading...');
@@ -94,7 +113,7 @@ function update_languagelist() {
           promises.push($.get(babelfile.url, (data) => {
             const rawdata = textdecoder.decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
             const parseddata = parseINIString(rawdata);
-            console.log(parseddata);
+            //console.log(parseddata);
             projects[currentproject].langs[babelfile.path.slice(project.prefix.length, -4)] = parseddata;
           }));
         }
@@ -147,25 +166,40 @@ function calculate_progress(project, lang) {
 
 function update_sectionlist() {
   $('.editor .section').html('');
-  if(currentlang < 0) {
-    $('.editor .section').append(`<i>Select a language</i>`);
+  if(currentlang == '') {
+    $('.editor .section').append(`<p><i>Select a language</i></p>`);
     return
   }
   const project = projects[currentproject];
   const language = project.langs[currentlang];
+  const baselang = project.langs[project.base];
+  let inheritlang;
+  if(language['meta']['inherit'] && language['meta']['inherit'].startsWith(project.prefix)) {
+    inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)];
+  }
 
-  Object.keys(language).forEach(section => {
+  Object.keys(baselang).forEach(section => {
     let out = `
       <div class="parent collapsible-parent closed">
         <a href="#" class="menubar-item" data-action="toggle-section">
           ${section}
         </a>
         <div class="collapsible">`;
-    Object.keys(language[section]).forEach(key => {
+    Object.keys(baselang[section]).forEach(key => {
+      let [value, state] = resolve_key_state(language, inheritlang, section, key);
+      let notes = '';
+      if(state == 'inherited') notes += `Inherited from ${inheritlang['meta']['name']}. `;
+      if(state == 'unknown') notes += `This key has been left blank, this may be intentional. `;
+
       out += `
-          <a href="#" class="menubar-item" data-action="select-string" data-id="${section+'/'+key}}">
+          <a
+            href="#"
+            title="${notes}"
+            class="menubar-item key-state-${state}"
+            data-action="select-string"
+            data-id="${section+'/'+key}">
             ${key}
-            <br><span class="dim preview">${language[section][key].substring(0, 50)}</span>
+            <br><span class="dim preview">${value.substring(0, 50)}</span>
           </a>`;
     });
     out += `
@@ -173,6 +207,24 @@ function update_sectionlist() {
       </div>`;
     $('.editor .section').append(out);
   });
+}
+
+function resolve_key_state(language, inheritlang, section, key) {
+  if(section in language && key in language[section]) {
+    if(language[section][key].length) {
+      return [language[section][key], 'valid'];
+    }
+    else {
+      return ['<i>blank</i>', 'unknown'];
+    }
+  }
+  else {
+    if(inheritlang && inheritlang != language) {
+      let [value, state] = resolve_key_state(inheritlang, null, section, key);
+      if(state != 'invalid') return [value, 'inherited'];
+    }
+    return ['<i>unset</i>', 'invalid'];
+  }
 }
 
 /*

@@ -139,3 +139,19 @@ nav h1 {
 .collapsible-parent.closed>.collapsible {
   display: none;
 }
+
+.key-state-valid {
+  border-left: 2px solid green;
+}
+.key-state-inherited {
+  border-left: 2px solid lightgreen;
+}
+.key-state-unknown {
+  border-left: 2px solid lightpink;
+}
+.key-state-invalid {
+  border-left: 2px solid red;
+}
+.key-state-changed {
+  border-left: 2px solid lightskyblue;
+}
