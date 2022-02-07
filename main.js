@@ -18,6 +18,7 @@ let projects = [
 ];
 let currentproject = -1;
 let currentlang = '';
+let changes = {};
 
 let textdecoder;
 if('TextDecoder' in window) {
@@ -35,6 +36,8 @@ $().ready(() => {
 
     switch (e.target.dataset.action) {
       case 'select-project':
+        if(Object.keys(changes).length && !confirm("You will lose changes to your translation. Continue?")) return;
+        changes = {};
         currentproject = e.target.dataset.id;
         console.log(`Project ${projects[currentproject].name} selected.`)
         $('.projstate').text(projects[currentproject].name);
@@ -42,9 +45,20 @@ $().ready(() => {
         update_languagelist();
         break;
       case 'select-language':
+        if(Object.keys(changes).length && !confirm("You will lose changes to your translation. Continue?")) return;
+        changes = {};
         currentlang = e.target.dataset.id;
         $('.langstate').text(currentlang);
         update_sectionlist();
+
+        if(currentlang == projects[currentproject].base) {
+          $('label[for="basestring"],#basestring').hide();
+          $('label[for="transstring"]').text("Value:");
+        }
+        else {
+          $('label[for="basestring"],#basestring').show();
+          $('label[for="transstring"]').text("Translation:");
+        }
         break;
       case 'toggle-section':
         $(e.target).parent().toggleClass('closed');
@@ -59,11 +73,12 @@ $().ready(() => {
         }
         let kv = e.target.dataset.id.split('/');
 
-        let [value, state] = resolve_key_state(baselang, null, kv[0], kv[1]);
-        $('#basestring').text(value);
+        let keystate = resolve_key_state(baselang, null, kv[0], kv[1]);
+        $('#basestring').val(keystate.state == 'valid'?keystate.value:'');
 
-        [value, state] = resolve_key_state(language, inheritlang, kv[0], kv[1]);
-        $('#transstring').text(state=='valid'||state=='inherited'?value:'');
+        keystate = resolve_key_state(language, inheritlang, kv[0], kv[1]);
+        $('#transstring').val(['valid', 'inherited', 'changed'].includes(keystate.state)?keystate.value:'');
+        $('#transstring').attr('data-id', e.target.dataset.id);
         break;
       default:
         console.warn(`No handler defined for action event ${e.target.dataset.action}`);
@@ -89,6 +104,43 @@ $().ready(() => {
       projects[i].langurl = babeltree.url;
     });
   }
+
+  // Autosave after every key press
+  $('#transstring').on('input', (e) => {
+    if(e.target.dataset.id) {
+      const project = projects[currentproject];
+      const language = project.langs[currentlang];
+      let inheritlang;
+      if(language['meta']['inherit'] && language['meta']['inherit'].startsWith(project.prefix)) {
+        inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)];
+      }
+      let kv = e.target.dataset.id.split('/');
+      let keystate = resolve_key_state(language, inheritlang, kv[0], kv[1]);
+      let ind = $(`.menubar-item[data-id="${e.target.dataset.id}"]`);
+
+      if(
+        !keystate.original
+        || (keystate.original.state == 'valid' && keystate.original.value != e.target.value)
+        || (['invalid','unknown'].includes(keystate.original.state) && e.target.value)) {
+        changes[e.target.dataset.id] = e.target.value;
+        ind.removeClass('key-state-valid key-state-invalid key-state-inherited key-state-unknown');
+        ind.addClass('key-state-changed');
+        if(e.target.value)
+          ind.find('span.preview').text(e.target.value.substring(0, 50));
+        else
+          ind.find('span.preview').html('<i>blank</i>');
+      }else{
+        delete changes[e.target.dataset.id];
+        ind.removeClass('key-state-changed');
+        ind.addClass('key-state-'+keystate.original.state);
+        if(e.target.value)
+          ind.find('span.preview').text(e.target.value.substring(0, 50));
+        else
+          ind.find('span.preview').html('<i>blank</i>');
+      }
+    }
+  });
+
   update_sectionlist();
 });
 
@@ -186,20 +238,20 @@ function update_sectionlist() {
         </a>
         <div class="collapsible">`;
     Object.keys(baselang[section]).forEach(key => {
-      let [value, state] = resolve_key_state(language, inheritlang, section, key);
+      let keystate = resolve_key_state(language, inheritlang, section, key);
       let notes = '';
-      if(state == 'inherited') notes += `Inherited from ${inheritlang['meta']['name']}. `;
-      if(state == 'unknown') notes += `This key has been left blank, this may be intentional. `;
+      if(keystate.state == 'inherited') notes += `Inherited from ${inheritlang['meta']['name']}. `;
+      if(keystate.state == 'unknown') notes += `This key has been left blank, this may be intentional. `;
 
       out += `
           <a
             href="#"
             title="${notes}"
-            class="menubar-item key-state-${state}"
+            class="menubar-item key-state-${keystate.state}"
             data-action="select-string"
             data-id="${section+'/'+key}">
             ${key}
-            <br><span class="dim preview">${value.substring(0, 50)}</span>
+            <br><span class="dim preview">${keystate.value.substring(0, 50)}</span>
           </a>`;
     });
     out += `
@@ -209,21 +261,45 @@ function update_sectionlist() {
   });
 }
 
+class KeyState {
+  state;
+  value;
+  original;
+
+  constructor(state=null, value=null, original=null) {
+    this.state = state;
+    this.value = value;
+    this.original = original;
+  }
+}
 function resolve_key_state(language, inheritlang, section, key) {
+  let keystate = new KeyState();
   if(section in language && key in language[section]) {
     if(language[section][key].length) {
-      return [language[section][key], 'valid'];
+      keystate.state = 'valid';
+      keystate.value = language[section][key];
     }
     else {
-      return ['<i>blank</i>', 'unknown'];
+      keystate.state = 'unknown';
+      keystate.value = '<i>blank</i>';
     }
   }
   else {
     if(inheritlang && inheritlang != language) {
-      let [value, state] = resolve_key_state(inheritlang, null, section, key);
-      if(state != 'invalid') return [value, 'inherited'];
+      keystate = resolve_key_state(inheritlang, null, section, key);
+      if(keystate.state != 'invalid') {
+        keystate.state = 'inherited';
+      }
     }
-    return ['<i>unset</i>', 'invalid'];
+    keystate.state = 'invalid';
+    keystate.value = '<i>unset</i>';
+  }
+  if(`${section}/${key}` in changes) {
+    change = changes[`${section}/${key}`];
+    if(change == '') change = '<i>blank</i>';
+    return new KeyState('changed', change, keystate);
+  } else {
+    return keystate;
   }
 }
 
