@@ -41,6 +41,8 @@ $().ready(() => {
         currentproject = e.target.dataset.id;
         console.log(`Project ${projects[currentproject].name} selected.`)
         $('.projstate').text(projects[currentproject].name);
+        $('#breadcrumb').empty();
+        $('#breadcrumb').append(`<span>${projects[currentproject].name}</span>`);
         document.title = projects[currentproject].name + ' | Babel Translator';
         update_languagelist();
         break;
@@ -49,21 +51,27 @@ $().ready(() => {
         changes = {};
         currentlang = e.target.dataset.id;
         $('.langstate').text(currentlang);
+        $('#breadcrumb>span:gt(0)').remove();
+        $('#breadcrumb').append(`<span>${projects[currentproject].langs[currentlang]['meta']['name']}</span>`);
         update_sectionlist();
 
         if(currentlang == projects[currentproject].base) {
           $('label[for="basestring"],#basestring').hide();
-          $('label[for="transstring"]').text("Value:");
+          $('label[for="transstring"]').text("Value");
         }
         else {
           $('label[for="basestring"],#basestring').show();
-          $('label[for="transstring"]').text("Translation:");
+          $('label[for="transstring"]').text("Translation");
         }
         break;
       case 'toggle-section':
         $(e.target).parent().toggleClass('closed');
         break;
       case 'select-string':
+        $('.editor .section .menubar-item.selected').removeClass('selected');
+        e.target.classList.add('selected');
+        e.target.parentElement.parentElement.querySelector('.menubar-item').classList.add('selected');
+
         const project = projects[currentproject];
         const language = project.langs[currentlang];
         const baselang = project.langs[project.base];
@@ -72,6 +80,9 @@ $().ready(() => {
           inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)];
         }
         let kv = e.target.dataset.id.split('/');
+        $('#breadcrumb>span:gt(1)').remove();
+        $('#breadcrumb').append(`<span>${kv[0]}</span>`);
+        $('#breadcrumb').append(`<span>${kv[1]}</span>`);
 
         let keystate = resolve_key_state(baselang, null, kv[0], kv[1]);
         $('#basestring').val(keystate.state == 'valid'?keystate.value:'');

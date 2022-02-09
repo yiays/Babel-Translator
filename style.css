@@ -20,9 +20,9 @@ body {
 
 nav {
   background: #505050;
-  padding-left: env(titlebar-area-x, 0);
-  padding-top: env(titlebar-area-y, 0);
-  padding-right: calc(env(titlebar-area-x) + env(titlebar-area-width));
+  padding-left: calc(env(titlebar-area-x, 0px) + 0.5rem);
+  padding-top: env(titlebar-area-y, 0px);
+  padding-right: calc(env(titlebar-area-x, 0px) + env(titlebar-area-width, 0px) + 0.5rem);
   min-height: env(titlebar-area-height, 2rem);
   box-sizing: border-box;
   -webkit-app-region: drag;
@@ -38,7 +38,6 @@ nav h1 {
   flex-direction: row;
   align-items: center;
   width: 100vw;
-  padding: 0.5rem;
   box-sizing: border-box;
   box-shadow: rgba(0,0,0,0.25) 0 0 0.25em;
 }
@@ -61,6 +60,9 @@ nav h1 {
 }
 .menubar .menubar-item:hover {
   background: #626262;
+}
+.menubar .menubar-item.selected {
+  background: #333;
 }
 .menubar .parent.disabled > .menubar-item {
   cursor: default;
@@ -154,4 +156,45 @@ nav h1 {
 }
 .key-state-changed {
   border-left: 2px solid lightskyblue;
+}
+
+.translator {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+#breadcrumb {
+  margin: 0;
+}
+#breadcrumb > span {
+  color: #aaa;
+}
+#breadcrumb > span::after {
+  content: ' > ';
+  color: #777;
+}
+#breadcrumb > span:last-child {
+  color: #ccc;
+}
+#breadcrumb > span:last-child::after {
+  content: none;
+}
+.translator > label {
+  font-size: 0.6em;
+  text-transform: uppercase;
+  color: #4572d3;
+  margin: 0.5rem 0 0.25rem 0;
+}
+.translator > textarea {
+  width: 100%;
+  border: 1px solid #ccc;
+  background: rgba(255, 255, 255, 0);
+  color: #ccc;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.translator > textarea:hover {
+  background:rgba(255, 255, 255, 0.15);
+}
+.translator > textarea:focus {
+  background: rgba(255, 255, 255, 0.3);
 }
