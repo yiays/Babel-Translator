@@ -64,8 +64,9 @@ nav h1 {
 .menubar .menubar-item.selected {
   background: #333;
 }
-.menubar .parent.disabled > .menubar-item {
+.menubar .parent.disabled > .menubar-item, .menubar-item.disabled {
   cursor: default;
+  color: #888!important;
 }
 .menubar .parent {
   position: relative;

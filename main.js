@@ -19,6 +19,7 @@ let projects = [
 let currentproject = -1;
 let currentlang = '';
 let changes = {};
+let downloadFile = null;
 
 let textdecoder;
 if('TextDecoder' in window) {
@@ -35,6 +36,17 @@ $().ready(() => {
     document.activeElement.blur();
 
     switch (e.target.dataset.action) {
+      case 'save-file':
+        if(currentproject && currentlang) {
+          commit_changes();
+
+          const project = projects[currentproject];
+
+          let data = json_to_ini(project.langs[currentlang]);
+          let filename = `${project.name.toLowerCase()}_${currentlang}.ini`;
+          save_text_as_file(data, filename);
+        }
+        break;
       case 'select-project':
         if(Object.keys(changes).length && !confirm("You will lose changes to your translation. Continue?")) return;
         changes = {};
@@ -43,9 +55,11 @@ $().ready(() => {
         $('.projstate').text(projects[currentproject].name);
         $('#breadcrumb').empty();
         $('#breadcrumb').append(`<span>${projects[currentproject].name}</span>`);
+        $('nav .menubar-item[data-action="save-file"]').addClass('disabled');
         document.title = projects[currentproject].name + ' | Babel Translator';
         update_languagelist();
         break;
+
       case 'select-language':
         if(Object.keys(changes).length && !confirm("You will lose changes to your translation. Continue?")) return;
         changes = {};
@@ -53,6 +67,7 @@ $().ready(() => {
         $('.langstate').text(currentlang);
         $('#breadcrumb>span:gt(0)').remove();
         $('#breadcrumb').append(`<span>${projects[currentproject].langs[currentlang]['meta']['name']}</span>`);
+        $('nav .menubar-item[data-action="save-file"]').removeClass('disabled');
         update_sectionlist();
 
         if(currentlang == projects[currentproject].base) {
@@ -64,9 +79,11 @@ $().ready(() => {
           $('label[for="transstring"]').text("Translation");
         }
         break;
+
       case 'toggle-section':
         $(e.target).parent().toggleClass('closed');
         break;
+
       case 'select-string':
         $('.editor .section .menubar-item.selected').removeClass('selected');
         e.target.classList.add('selected');
@@ -91,6 +108,7 @@ $().ready(() => {
         $('#transstring').val(['valid', 'inherited', 'changed'].includes(keystate.state)?keystate.value:'');
         $('#transstring').attr('data-id', e.target.dataset.id);
         break;
+
       default:
         console.warn(`No handler defined for action event ${e.target.dataset.action}`);
         break;
@@ -212,8 +230,8 @@ function calculate_progress(project, lang) {
     return 100;
   }
 
-  var refcount = 0;
-  var fieldcount = 0;
+  let refcount = 0;
+  let fieldcount = 0;
   Object.keys(project.langs[project.base]).forEach(section => {
     if(section in project.langs[lang]) {
       Object.keys(project.langs[project.base][section]).forEach(key => {
@@ -314,37 +332,96 @@ function resolve_key_state(language, inheritlang, section, key) {
   }
 }
 
+function commit_changes() {
+  const project = projects[currentproject];
+  let language = project.langs[currentlang];
+
+  Object.entries(changes).forEach((change) => {
+    kv = change[0].split('/');
+    language[kv[0]][kv[1]] = change[1];
+  });
+  changes = {};
+  update_sectionlist();
+}
+
 /*
   INI Parser  - https://gist.github.com/anonymous/dad852cde5df545ed81f1bc334ea6f72
+  Modified for my needs with support for multi-line values and preserving comment data
 */
 function parseINIString(data){
-  var regex = {
-      section: /^\s*\[\s*([^\]]*)\s*\]\s*$/,
-      param: /^\s*([^=]+?)\s*=\s*(.*?)\s*$/,
-      comment: /^\s*;.*$/
+  let regex = {
+    section: /^\s*\[\s*([^\]]*)\s*\]\s*$/,
+    param: /^\s*([^=]+?)\s*=\s*(.*?)\s*$/,
+    comment: /^\s*;.*$/
   };
-  var value = {};
-  var lines = data.split(/[\r\n]+/);
-  var section = null;
+  let out = {};
+  let lines = data.split(/[\r\n]+/);
+  let section = null;
+  let key = null;
+  let commentcounter = 0;
+
   lines.forEach(function(line){
-      if(regex.comment.test(line)){
-          return;
-      }else if(regex.param.test(line)){
-          var match = line.match(regex.param);
-          if(section){
-              value[section][match[1]] = match[2];
-          }else{
-              value[match[1]] = match[2];
-          }
-      }else if(regex.section.test(line)){
-          var match = line.match(regex.section);
-          value[match[1]] = {};
-          section = match[1];
-      }else if(line.length == 0 && section){
-          section = null;
-      };
+    if(regex.comment.test(line)){
+      if(section) out[section]['_comment_'+commentcounter] = line;
+      else out['_comment_'+commentcounter] = line;
+      commentcounter++;
+    }else if(regex.param.test(line)){
+      let match = line.match(regex.param);
+      key = match[1];
+      if(section){
+        out[section][key] = match[2];
+      }else{
+        out[key] = match[2];
+      }
+    }else if(key && line.startsWith('\t')){
+      if(section) out[section][key] += '\n' + line.replace('\t', '');
+      else out[key] += '\n' + line.replace('\t', '');
+    }else if(regex.section.test(line)){
+      let match = line.match(regex.section);
+      out[match[1]] = {};
+      section = match[1];
+      key = null;
+    }else if(line.length == 0 && section){
+      section = null;
+      key = null;
+    };
   });
-  return value;
+  return out;
+}
+/*
+  Basic JSON to INI Converter
+  Includes comment support with the _comment_i syntax.
+*/
+function json_to_ini(data) {
+  let out = '';
+  let i = 0;
+  Object.entries(data).forEach((section) => {
+    if(i > 0) out += '\n';
+    out += `[${section[0]}]\n`;
+    Object.entries(section[1]).forEach((keyvalue) => {
+      if(keyvalue[0].startsWith('_comment_'))
+        out += keyvalue[1] + '\n';
+      else
+        out += `${keyvalue[0]} = ${keyvalue[1].replaceAll('\n', '\n\t')}\n`;
+    });
+    i++;
+  });
+  return out;
+}
+/*
+  Save text as file - https://stackoverflow.com/a/21016088/5642305
+*/
+function save_text_as_file(text, filename) {
+  if(downloadFile !== null) window.URL.revokeObjectURL(downloadFile);
+
+  let blob = new Blob([text], {type: 'text/plain'});
+  let url = window.URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  document.body.appendChild(a);
+  a.href = url;
+  a.download = filename;
+  a.click();
+  a.remove();
 }
 
 // http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
@@ -358,8 +435,8 @@ function parseINIString(data){
  */
 
 function Utf8ArrayToStr(array) {
-  var out, i, len, c;
-  var char2, char3;
+  let out, i, len, c;
+  let char2, char3;
 
   out = "";
   len = array.length;
