@@ -253,7 +253,10 @@ function update_languagelist() {
     $('.languagelist').parent().addClass('disabled');
     $('.langstate').text("N/A");
     return
+  }else{
+    $('.langstate').text('None selected');
   }
+  
   const project = projects[currentproject];
 
   if(Object.keys(project.langs).length == 0) {
@@ -354,7 +357,7 @@ function resolve_key_state(language, inheritlang, section, key) {
     keystate.state = 'invalid';
     keystate.value = '<i>unset</i>';
   }
-  if(`${section}/${key}` in changes) {
+  if(language == projects[currentproject].langs[currentlang] && `${section}/${key}` in changes) {
     change = changes[`${section}/${key}`];
     if(change == '') change = '<i>blank</i>';
     return new KeyState('changed', change, keystate);
