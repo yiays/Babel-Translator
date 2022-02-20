@@ -19,6 +19,8 @@
       <div class="parent">
         <a href="#" class="menubar-item" data-action="none">File</a>
         <div class="dropdown">
+          <a href="#" class="menubar-item disabled" data-action="new-language">New Language/Dialect</a>
+          <hr>
           <a href="#" class="menubar-item disabled" data-action="open-file">Open file</a>
           <a href="#" class="menubar-item disabled" data-action="open-file-url">Open URL</a>
           <hr>
@@ -73,7 +75,7 @@
             <br><progress value="100" max="100"> 100%</progress>
           </a>
           <hr>
-          <a href="#" class="menubar-item" data-action="create-language"><i>Create new</i></a>
+          <a href="#" class="menubar-item" data-action="new-language"><i>Create new language/dialect</i></a>
         </div>
       </div>
 
@@ -105,6 +107,28 @@
         <label for="transstring">Translation</label>
         <textarea cols=80 rows="8" id="transstring"></textarea>
       </div>
+    </div>
+
+    <div class="modal-bg hidden">
+      <form id="newlang" class="modal">
+        <div class="modal-header">
+          <h2>Create a new language/dialect</h2>
+        </div>
+        <div class="modal-body">
+          <label for="newlangname">Language Name</label>
+          <input type="text" id="newlangname" name="name" placeholder="English (US)" required>
+          <br><label for="newlangcode">Language Code</label>
+          <input type="text" id="newlangcode" name="lang" placeholder="en" required minlength="2" maxlength="3" style="width:3rem;">
+          <sub>A 2 letter code is prefered, a 3 letter code is also accepted. <a href="https://www.loc.gov/standards/iso639-2/php/code_list.php" target="_blank">Find your language code &gt;</a></sub>
+          <br><label for="newlangcountry">Country Code (optional)</label>
+          <input type="text" id="newlangcountry" name="country" placeholder="US" minlength="2" maxlength="3" style="width:3rem;">
+          <sub><b>Only provide a country code if this language is a dialect.</b> <a href="https://www.loc.gov/marc/countries/countries_code.html" target="_blank">Find your country code &gt;</a></sub>
+        </div>
+        <div class="modal-footer">
+          <input class="btn" type="submit" value="Create">
+          <button class="btn modal-cancel">Cancel</button>
+        </div>
+      </form>
     </div>
 
     <script src="https://cdn.yiays.com/jquery-3.6.0.min.js"></script>

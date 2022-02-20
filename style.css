@@ -18,6 +18,38 @@ body {
   overflow: hidden;
 }
 
+
+label {
+  font-size: 0.6em;
+  text-transform: uppercase;
+  color: #4572d3;
+  margin: 0.5rem 0 0.25rem 0;
+}
+.btn{
+	display: inline-block;
+  font-size: 1.25em;
+	padding: 0.5em;
+	margin: 0 0.5rem 0.5rem 0;
+	cursor: pointer;
+  background: none;
+  color: #ddd;
+  border: #ccc solid 1px;
+  border-radius: 0.5em;
+	box-shadow: inset 0 0 0 1.1em rgba(255,255,255,0);
+	transition: box-shadow 250ms;
+}
+.btn:hover{
+	box-shadow: inset 0 0 0 1.1em rgba(255,255,255,0.25);
+}
+a {
+  color: #4572d3;
+  text-decoration: none; /* no underline */
+}
+a:hover {
+  color: #7a99dd;
+  text-shadow: 1px 1px #4572d3;
+}
+
 nav {
   background: #505050;
   padding-left: calc(env(titlebar-area-x, 0px) + 0.5rem);
@@ -58,8 +90,9 @@ nav h1 {
 .menubar .menubar-item > * {
   pointer-events: none;
 }
-.menubar .menubar-item:hover {
+.menubar-item:hover {
   background: #626262;
+  text-shadow: none;
 }
 .menubar .menubar-item.selected {
   background: #333;
@@ -180,12 +213,6 @@ nav h1 {
 #breadcrumb > span:last-child::after {
   content: none;
 }
-.translator > label {
-  font-size: 0.6em;
-  text-transform: uppercase;
-  color: #4572d3;
-  margin: 0.5rem 0 0.25rem 0;
-}
 .translator > textarea {
   width: 100%;
   border: 1px solid #ccc;
@@ -198,4 +225,42 @@ nav h1 {
 }
 .translator > textarea:focus {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-bg {
+  position: fixed;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  pointer-events: unset;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.25);
+  transition: top 250ms;
+}
+.modal-bg.hidden {
+  top: -100vh;
+  pointer-events: none;
+}
+.modal {
+  min-width: 15rem;
+  background: #333;
+  box-shadow: rgba(0,0,0,0.25) 0 0 0.25em;
+}
+.modal-header {
+  padding: 0 2rem;
+  border-bottom: 1px solid #ccc;
+}
+.modal-body {
+  display: flex;
+  padding: 2rem;
+  padding-top: 1rem;
+  flex-direction: column;
+  border-bottom: 1px solid #ccc;
+}
+.modal-footer {
+  padding: 1.5rem 2rem 1rem 2rem;
 }

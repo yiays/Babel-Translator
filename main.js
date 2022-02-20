@@ -20,6 +20,10 @@ let currentproject = parseInt(window.localStorage.getItem('currentproject') || '
 let currentlang = window.localStorage.getItem('currentlang') || '';
 let changes = JSON.parse(window.localStorage.getItem('changes') || '{}');
 let downloadFile = null;
+const readonlykeys = [
+  'meta/inherit',
+  'meta/language'
+]
 
 let textdecoder;
 if('TextDecoder' in window) {
@@ -74,6 +78,14 @@ $().ready(() => {
         on_language_set()
         break;
 
+      case 'new-language':
+        if(Object.keys(changes).length && !confirm("You will lose changes to your translation. Continue?")) return;
+
+        if(currentproject >= 0)
+          $('#newlang').parent().removeClass('hidden');
+          $('#newlang input[name="name"]').focus();
+        break;
+
       case 'toggle-section':
         $(e.target).parent().toggleClass('closed');
         break;
@@ -88,7 +100,7 @@ $().ready(() => {
         const baselang = project.langs[project.base];
         let inheritlang;
         if(language['meta']['inherit'] && language['meta']['inherit'].startsWith(project.prefix)) {
-          inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)];
+          inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)] ?? null;
         }
         let kv = e.target.dataset.id.split('/');
         $('#breadcrumb>span:gt(1)').remove();
@@ -101,12 +113,63 @@ $().ready(() => {
         keystate = resolve_key_state(language, inheritlang, kv[0], kv[1]);
         $('#transstring').val(['valid', 'inherited', 'changed'].includes(keystate.state)?keystate.value:'');
         $('#transstring').attr('data-id', e.target.dataset.id);
+
+        if(readonlykeys.includes(e.target.dataset.id)) $('#transstring').prop('disabled', true);
+        else $('#transstring').prop('disabled', false);
+
         break;
 
       default:
         console.warn(`No handler defined for action event ${e.target.dataset.action}`);
         break;
     }
+  });
+
+  $('body').on('click', '.modal-bg, .modal-cancel', (e) => {
+    if(e.target.classList.contains('modal-bg') || e.target.classList.contains('modal-cancel')) {
+      e.preventDefault();
+
+      if(e.target.classList.contains('modal-bg')) {
+        e.target.classList.add('hidden');
+        $(e.target).children('form').trigger('reset');
+        return;
+      }
+      
+      $(e.target).parents('.modal-bg').addClass('hidden');
+      $(e.target).parents('form').trigger('reset');
+
+      return;
+    }
+  });
+
+  $('#newlang').on('submit', (e) => {
+    e.preventDefault();
+
+    let data = new FormData(e.target);
+    currentlang = data.get('lang').toLowerCase();
+    if(data.get('country')) {
+      currentlang += '-' + data.get('country').toUpperCase();
+    }
+
+    if(Object.keys(projects[currentproject].langs).includes(currentlang)) {
+      alert("This language already exists!");
+      return;
+    }
+
+    changes = {
+      'meta/name': data.get('name'),
+      'meta/language': currentlang,
+      'meta/inherit': currentlang.indexOf('-') >= 0?data.get('lang'):'',
+      'meta/contributors': ''
+    }
+    commit_changes(true);
+    update_languagelist();
+    update_sectionlist();
+    
+    window.localStorage.setItem('currentlang', currentlang);
+    window.localStorage.setItem('changes', JSON.stringify(changes));
+
+    $('#newlang .modal-cancel').trigger('click');
   });
 
   // Setup while fetching projects
@@ -142,7 +205,7 @@ $().ready(() => {
       const language = project.langs[currentlang];
       let inheritlang;
       if(language['meta']['inherit'] && language['meta']['inherit'].startsWith(project.prefix)) {
-        inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)];
+        inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)] ?? null;
       }
       let kv = e.target.dataset.id.split('/');
       let keystate = resolve_key_state(language, inheritlang, kv[0], kv[1]);
@@ -183,6 +246,7 @@ function on_project_set() {
   $('#breadcrumb').empty();
   $('#breadcrumb').append(`<span>${projects[currentproject].name}</span>`);
   $('nav .menubar-item[data-action="save-file"]').addClass('disabled');
+  $('nav .menubar-item[data-action="new-language"]').removeClass('disabled');
   document.title = projects[currentproject].name + ' | Babel Translator';
   update_languagelist();
 }
@@ -197,7 +261,7 @@ function update_sectionlist() {
   const baselang = project.langs[project.base];
   let inheritlang;
   if(language['meta']['inherit'] && language['meta']['inherit'].startsWith(project.prefix)) {
-    inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)];
+    inheritlang = project.langs[language['meta']['inherit'].substring(project.prefix.length)] ?? null;
   }
 
   Object.keys(baselang).forEach(section => {
@@ -287,6 +351,10 @@ function update_languagelist() {
   } else {
     if(Object.keys(project.langs).includes(currentlang)) {
       on_language_set();
+    } else if(changes) {
+      commit_changes(true);
+      update_languagelist();
+      update_sectionlist();
     } else {
       currentlang = '';
       update_sectionlist();
@@ -302,6 +370,11 @@ function update_languagelist() {
       </a>
     `);
   };
+  $('.languagelist').append(`
+    <a href="#" class="menubar-item" data-action="new-language">
+      <i>Create new</i>
+    </a>
+  `);
 }
 
 function calculate_progress(project, lang) {
@@ -366,17 +439,25 @@ function resolve_key_state(language, inheritlang, section, key) {
   }
 }
 
-function commit_changes() {
+function commit_changes(keep_changes=false) {
   const project = projects[currentproject];
+  if(!Object.keys(project.langs).includes(currentlang)) {
+    project.langs[currentlang] = {};
+  }
   let language = project.langs[currentlang];
 
   Object.entries(changes).forEach((change) => {
     kv = change[0].split('/');
+    if(!Object.keys(language).includes(kv[0])) {
+      language[kv[0]] = {};
+    }
     language[kv[0]][kv[1]] = change[1];
   });
-  changes = {};
-  window.localStorage.setItem('changes', '{}');
-  update_sectionlist();
+  if(!keep_changes) {
+    changes = {};
+    window.localStorage.setItem('changes', '{}');
+    update_sectionlist();
+  }
 }
 
 /*
