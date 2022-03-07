@@ -51,7 +51,7 @@ $().ready(() => {
     switch (e.target.dataset.action) {
       case 'save-file':
         if(currentproject >= 0 && currentlang) {
-          commit_changes();
+          commit_changes(true);
 
           const project = projects[currentproject];
 
@@ -433,13 +433,17 @@ function resolve_key_state(language, inheritlang, section, key) {
   if(language == projects[currentproject].langs[currentlang] && `${section}/${key}` in changes) {
     change = changes[`${section}/${key}`];
     if(change == '') change = '<i>blank</i>';
+    if(change == keystate.value) {
+      delete changes[`${section}/${key}`];
+      return keystate;
+    }
     return new KeyState('changed', change, keystate);
   } else {
     return keystate;
   }
 }
 
-function commit_changes(keep_changes=false) {
+function commit_changes(keep_changes=true) {
   const project = projects[currentproject];
   if(!Object.keys(project.langs).includes(currentlang)) {
     project.langs[currentlang] = {};
@@ -522,7 +526,7 @@ function json_to_ini(data) {
     });
     i++;
   });
-  return out;
+  return out + '\n';
 }
 /*
   Save text as file - https://stackoverflow.com/a/21016088/5642305
