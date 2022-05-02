@@ -351,7 +351,7 @@ function update_languagelist() {
   } else {
     if(Object.keys(project.langs).includes(currentlang)) {
       on_language_set();
-    } else if(changes) {
+    } else if(currentlang && changes) {
       commit_changes(true);
       update_languagelist();
       update_sectionlist();
@@ -445,7 +445,7 @@ function resolve_key_state(language, inheritlang, section, key) {
 
 function commit_changes(keep_changes=true) {
   const project = projects[currentproject];
-  if(!Object.keys(project.langs).includes(currentlang)) {
+  if(currentlang && !Object.keys(project.langs).includes(currentlang)) {
     project.langs[currentlang] = {};
   }
   let language = project.langs[currentlang];
