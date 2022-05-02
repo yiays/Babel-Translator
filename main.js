@@ -19,6 +19,8 @@ let projects = [
 let currentproject = parseInt(window.localStorage.getItem('currentproject') || '-1');
 let currentlang = window.localStorage.getItem('currentlang') || '';
 let changes = JSON.parse(window.localStorage.getItem('changes') || '{}');
+let langcache = JSON.parse(window.localStorage.getItem('langcache') || '{}');
+let offline = false;
 let downloadFile = null;
 const readonlykeys = [
   'meta/inherit',
@@ -120,12 +122,28 @@ $().ready(() => {
         break;
 
       default:
-        console.warn(`No handler defined for action event ${e.target.dataset.action}`);
+        console.warn(`No handler defined for menubar action event ${e.target.dataset.action}`);
         break;
     }
   });
 
-  $('body').on('click', '.modal-bg, .modal-cancel', (e) => {
+  $('body').on('click', 'button[data-action], .stealth-button', (e) => {
+    switch(e.target.dataset.action) {
+      case 'work-offline':
+        offline_mode(true);
+        break;
+      
+      case 'work-online':
+        offline_mode(false);
+        break;
+      
+      default:
+        console.warn(`No handler defined for button action event ${e.target.dataset.action}`);
+        break;
+    }
+  })
+
+  $('body').on('click', '.modal-cancel', (e) => {
     if(e.target.classList.contains('modal-bg') || e.target.classList.contains('modal-cancel')) {
       e.preventDefault();
 
@@ -137,7 +155,6 @@ $().ready(() => {
       
       $(e.target).parents('.modal-bg').addClass('hidden');
       $(e.target).parents('form').trigger('reset');
-
       return;
     }
   });
@@ -173,30 +190,8 @@ $().ready(() => {
   });
 
   // Setup while fetching projects
-  $('.projstate').text("None selected");
-  $('.projectlist').html('');
-  $('.langstate').text("N/A");
-  $('.languagelist').html('');
-
-  let promises = [];
-  for (let i = 0; i < projects.length; i++) {
-    const project = projects[i];
-
-    $('.projectlist').append(`
-    <a href="#" class="menubar-item" data-action="select-project" data-id=${i}>
-      ${project.name}
-    </a>`);
-
-    promises.push($.get(project.url, (treedata) => {
-      let babeltree = treedata.tree.find(tree => tree.path == 'babel');
-      projects[i].langurl = babeltree.url;
-    }));
-  }
-  Promise.all(promises).then((_) => {
-    if(currentproject >= 0) {
-      on_project_set();
-    }
-  });
+  update_projectlist();
+  update_editor();
 
   // Autosave after every key press
   $('#transstring').on('input', (e) => {
@@ -249,7 +244,178 @@ function on_project_set() {
   $('nav .menubar-item[data-action="new-language"]').removeClass('disabled');
   document.title = projects[currentproject].name + ' | Babel Translator';
   update_languagelist();
+  update_editor();
 }
+
+function update_projectlist() {
+  $('.projstate').text("None selected");
+  $('.projectlist').html('');
+  $('.langstate').text("N/A");
+  $('.languagelist').html('');
+
+  let promises = [];
+  for (let i = 0; i < projects.length; i++) {
+    const project = projects[i];
+
+    $('.projectlist').append(`
+      <a href="#" class="menubar-item disabled" data-action="none" data-id=${i}>
+        ${project.name}
+      </a>
+    `);
+    if(offline) {
+      if(project.name in langcache) {
+        var projectentry = $(`.projectlist .menubar-item[data-id="${i}"]`);
+        projectentry.removeClass('disabled');
+        projectentry.attr('data-action', 'select-project');
+      }
+    }else{
+      promises.push($.get(project.url, (treedata) => {
+        let babeltree = treedata.tree.find(tree => tree.path == 'babel');
+        projects[i].langurl = babeltree.url;
+        var projectentry = $(`.projectlist .menubar-item[data-id="${i}"]`);
+        projectentry.removeClass('disabled');
+        projectentry.attr('data-action', 'select-project');
+      }));
+    }
+  }
+
+  if(promises.length) {
+    Promise.all(promises).then((_) => {
+      if(currentproject >= 0) {
+        on_project_set();
+      }
+    }).catch((error) => {
+      if(error.status == 403) {
+        $('#github-timeout').parent().removeClass('hidden');
+      }
+    });
+  }else{
+    if(currentproject >= 0) {
+      on_project_set();
+    }
+  }
+}
+
+function on_language_set() {
+  $('.langstate').text(currentlang);
+  $('#breadcrumb>span:gt(0)').remove();
+  $('#breadcrumb').append(`<span>${projects[currentproject].langs[currentlang]['meta']['name']}</span>`);
+  $('nav .menubar-item[data-action="save-file"]').removeClass('disabled');
+  update_sectionlist();
+  update_editor();
+
+  if(currentlang == projects[currentproject].base) {
+    $('label[for="basestring"],#basestring').hide();
+    $('label[for="transstring"]').text("Value");
+  }
+  else {
+    $('label[for="basestring"],#basestring').show();
+    $('label[for="transstring"]').text("Translation");
+  }
+}
+function update_languagelist() {
+  $('.languagelist').html('');
+  if(currentproject < 0) {
+    $('.languagelist').parent().addClass('disabled');
+    $('.langstate').text("N/A");
+    return
+  }else{
+    $('.langstate').text('None selected');
+  }
+  
+  const project = projects[currentproject];
+
+  if(offline) {
+    Object.keys(langcache[project.name]).forEach(filepath => {
+      projects[currentproject].langs[filepath.slice(project.prefix.length, -4)] = langcache[project.name][filepath].data;
+    });
+  }
+  
+  if(Object.keys(project.langs).length == 0 && !offline) {
+    $('.langstate').text('Loading...');
+    $.get(project.langurl, (babeldata) => {
+      let babelfiles = babeldata.tree;
+      let promises = [];
+      babelfiles.forEach(babelfile => {
+        if(babelfile.path.startsWith(project.prefix) && babelfile.type == 'blob') {
+          if(project.name in langcache && babelfile.path in langcache[project.name] && babelfile.sha == langcache[project.name][babelfile.path].sha) {
+            projects[currentproject].langs[babelfile.path.slice(project.prefix.length, -4)] = langcache[project.name][babelfile.path].data;
+            return;
+          }
+          promises.push($.get(babelfile.url, (data) => {
+            const rawdata = textdecoder.decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
+            const parseddata = parseINIString(rawdata);
+            if(!(project.name in langcache)) langcache[project.name] = {};
+            langcache[project.name][babelfile.path] = {
+              sha: babelfile.sha,
+              data: parseddata
+            }
+            //console.log(parseddata);
+            projects[currentproject].langs[babelfile.path.slice(project.prefix.length, -4)] = parseddata;
+          }));
+        }
+      });
+
+      if(promises.length) {
+        Promise.all(promises).then((_) => {
+          if(Object.keys(projects[currentproject].langs).length == 0) {
+            $('.langstate').text('Load failed!');
+            return;
+          }
+          window.localStorage.setItem('langcache', JSON.stringify(langcache));
+          update_languagelist();
+        }).catch((error) => {
+          if(error.status == 403) {
+            $('#github-timeout').parent().removeClass('hidden');
+          }
+        });
+      }else{
+        update_languagelist();
+      }
+    });
+    return;
+  } else {
+    if(Object.keys(project.langs).includes(currentlang)) {
+      // Restore current language in editor
+      on_language_set();
+    } else if(currentlang && Object(changes).length) {
+      // Regenerate new language that hasn't been submitted yet
+      commit_changes(true);
+      update_languagelist();
+      update_sectionlist();
+    } else {
+      // Load project without a language selected
+      currentlang = '';
+      update_sectionlist();
+    }
+  }
+
+  // Populate language list
+  for(const [langname, lang] of Object.entries(projects[currentproject].langs)) {
+    const progress = calculate_progress(project, langname);
+    if('offline' in lang['meta']) {
+      $('.languagelist').append(`
+        <a href="#" class="menubar-item disabled" data-action="none">
+          ${lang['meta']['name']}
+          <br><i>Unavailable offline</i>
+        </a>
+      `);
+    }else{
+      $('.languagelist').append(`
+        <a href="#" class="menubar-item" data-action="select-language" data-id="${langname}">
+          ${lang['meta']['name']}
+          <br><progress value=${progress} max=100>${progress}%</progress>
+        </a>
+      `);
+    }
+  };
+  $('.languagelist').append(`
+    <a href="#" class="menubar-item" data-action="new-language">
+      <i>Create new</i>
+    </a>
+  `);
+}
+
 function update_sectionlist() {
   $('.editor .section').html('');
   if(currentlang == '') {
@@ -295,86 +461,19 @@ function update_sectionlist() {
   });
 }
 
-function on_language_set() {
-  $('.langstate').text(currentlang);
-  $('#breadcrumb>span:gt(0)').remove();
-  $('#breadcrumb').append(`<span>${projects[currentproject].langs[currentlang]['meta']['name']}</span>`);
-  $('nav .menubar-item[data-action="save-file"]').removeClass('disabled');
-  update_sectionlist();
-
-  if(currentlang == projects[currentproject].base) {
-    $('label[for="basestring"],#basestring').hide();
-    $('label[for="transstring"]').text("Value");
-  }
-  else {
-    $('label[for="basestring"],#basestring').show();
-    $('label[for="transstring"]').text("Translation");
-  }
-}
-function update_languagelist() {
-  $('.languagelist').html('');
+function update_editor() {
   if(currentproject < 0) {
-    $('.languagelist').parent().addClass('disabled');
-    $('.langstate').text("N/A");
-    return
+    $('#basestring').val("Welcome to Babel Translator!");
+    $('#transstring').val("Select a project to get started.");
+  }
+  else if(currentlang == '') {
+    $('#basestring').val("Welcome to Babel Translator!");
+    $('#transstring').val("Select a language to begin translation.");
   }else{
-    $('.langstate').text('None selected');
+    $('#basestring').val("Welcome to Babel Translator!");
+    $('#transstring').val("Select a string to translate it.");
   }
-  
-  const project = projects[currentproject];
-
-  if(Object.keys(project.langs).length == 0) {
-    $('.langstate').text('Loading...');
-    $.get(project.langurl, (babeldata) => {
-      let babelfiles = babeldata.tree;
-      let promises = [];
-      babelfiles.forEach(babelfile => {
-        if(babelfile.path.startsWith(project.prefix) && babelfile.type == 'blob') {
-          promises.push($.get(babelfile.url, (data) => {
-            const rawdata = textdecoder.decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
-            const parseddata = parseINIString(rawdata);
-            //console.log(parseddata);
-            projects[currentproject].langs[babelfile.path.slice(project.prefix.length, -4)] = parseddata;
-          }));
-        }
-      });
-
-      Promise.all(promises).then((_) => {
-        if(Object.keys(projects[currentproject].langs).length == 0) {
-          $('.langstate').text('Load failed!');
-          return;
-        }
-        update_languagelist();
-      })
-    });
-    return;
-  } else {
-    if(Object.keys(project.langs).includes(currentlang)) {
-      on_language_set();
-    } else if(currentlang && changes) {
-      commit_changes(true);
-      update_languagelist();
-      update_sectionlist();
-    } else {
-      currentlang = '';
-      update_sectionlist();
-    }
-  }
-
-  for(const [langname, lang] of Object.entries(projects[currentproject].langs)) {
-    const progress = calculate_progress(project, langname);
-    $('.languagelist').append(`
-      <a href="#" class="menubar-item" data-action="select-language" data-id="${langname}">
-        ${lang['meta']['name']}
-        <br><progress value=${progress} max=100>${progress}%</progress>
-      </a>
-    `);
-  };
-  $('.languagelist').append(`
-    <a href="#" class="menubar-item" data-action="new-language">
-      <i>Create new</i>
-    </a>
-  `);
+  $('#transstring').prop('disabled', 'true')
 }
 
 function calculate_progress(project, lang) {
@@ -462,6 +561,16 @@ function commit_changes(keep_changes=true) {
     window.localStorage.setItem('changes', '{}');
     update_sectionlist();
   }
+}
+
+function offline_mode(value) {
+  offline = value;
+  if(offline) {
+    $('.offline-alert').show();
+  }else{
+    $('.offline-alert').hide();
+  }
+  update_projectlist();
 }
 
 /*

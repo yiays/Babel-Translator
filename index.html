@@ -42,6 +42,10 @@
           </a>
         </div>
       </div>
+      <div class="offline-alert" style="display:none;">
+        <b>Working offline.</b>
+        <a href="#" class="stealth-button" data-action="work-online">Reconnect</a>
+      </div>
     </nav>
 
     <div class="hero menubar">
@@ -109,7 +113,7 @@
       </div>
     </div>
 
-    <div class="modal-bg hidden">
+    <div class="modal-bg hidden modal-cancel">
       <form id="newlang" class="modal">
         <div class="modal-header">
           <h2>Create a new language/dialect</h2>
@@ -129,6 +133,29 @@
           <button class="btn modal-cancel">Cancel</button>
         </div>
       </form>
+    </div>
+
+    <div class="modal-bg hidden">
+      <div id="github-timeout" class="modal">
+        <div class="modal-header">
+          <h1>GitHub Timeout</h1>
+        </div>
+        <div class="modal-body">
+          <p>
+            GitHub limits the amount of requests you can make to 60 per hour. This IP Address has exceeded this amount.
+          </p>
+          <p>
+            <i>This is usually caused by refreshing the page too many times or changing projects too frequently.</i>
+          </p>
+          <p>
+            You can either wait an hour, sign in with GitHub to increase your request limit, or work offline.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" disabled>Sign in with GitHub unavailable</button>
+          <button class="btn modal-cancel" data-action="work-offline">Work Offline</button>
+        </div>
+      </div>
     </div>
 
     <script src="https://cdn.yiays.com/jquery-3.6.0.min.js"></script>

@@ -41,6 +41,10 @@ label {
 .btn:hover{
 	box-shadow: inset 0 0 0 1.1em rgba(255,255,255,0.25);
 }
+.btn[disabled] {
+  cursor: default;
+  opacity: 0.5;
+}
 a {
   color: #4572d3;
   text-decoration: none; /* no underline */
@@ -127,6 +131,12 @@ nav h1 {
   border-left: none;
   border-top: #ccc solid 1px;
   margin: 0.25rem 0;
+}
+
+.menubar .offline-alert {
+  margin-left: auto;
+  background: maroon;
+  opacity: 0.75;
 }
 
 .hero {
