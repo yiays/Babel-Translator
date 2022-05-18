@@ -44,6 +44,17 @@ if (!'localStorage' in window) {
 }
 
 $().ready(() => {
+  if(!getCookie('block-welcome')) {
+    $('#welcome').parent().removeClass('hidden');
+    $('#welcome a')[0].focus();
+  }
+  $('#block-welcome').on('change', (e) => {
+    if(e.target.checked)
+      setCookie('block-welcome', 1, 365);
+    else
+      setCookie('block-welcome', null, -1);
+  })
+
   $('body').on('click', '.menubar .menubar-item', (e) => {
     if(e.target.getAttribute('href') == '#') e.preventDefault();
     if(e.target.dataset.action == 'none') return;
@@ -119,6 +130,12 @@ $().ready(() => {
         if(readonlykeys.includes(e.target.dataset.id)) $('#transstring').prop('disabled', true);
         else $('#transstring').prop('disabled', false);
 
+        break;
+      
+      case 'show-welcome':
+        $('#welcome').parent().removeClass('hidden');
+        $('#welcome a')[0].focus();
+        $('#block-welcome').prop('checked', getCookie('block-welcome')?'true':'false');
         break;
 
       default:
@@ -617,6 +634,7 @@ function parseINIString(data){
   });
   return out;
 }
+
 /*
   Basic JSON to INI Converter
   Includes comment support with the _comment_i syntax.
@@ -637,6 +655,7 @@ function json_to_ini(data) {
   });
   return out + '\n';
 }
+
 /*
   Save text as file - https://stackoverflow.com/a/21016088/5642305
 */
@@ -671,28 +690,53 @@ function Utf8ArrayToStr(array) {
   len = array.length;
   i = 0;
   while(i < len) {
-  c = array[i++];
-  switch(c >> 4)
-  { 
-    case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
-      // 0xxxxxxx
-      out += String.fromCharCode(c);
-      break;
-    case 12: case 13:
-      // 110x xxxx   10xx xxxx
-      char2 = array[i++];
-      out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
-      break;
-    case 14:
-      // 1110 xxxx  10xx xxxx  10xx xxxx
-      char2 = array[i++];
-      char3 = array[i++];
-      out += String.fromCharCode(((c & 0x0F) << 12) |
-                     ((char2 & 0x3F) << 6) |
-                     ((char3 & 0x3F) << 0));
-      break;
+    c = array[i++];
+    switch(c >> 4)
+    { 
+      case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+        // 0xxxxxxx
+        out += String.fromCharCode(c);
+        break;
+      case 12: case 13:
+        // 110x xxxx   10xx xxxx
+        char2 = array[i++];
+        out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
+        break;
+      case 14:
+        // 1110 xxxx  10xx xxxx  10xx xxxx
+        char2 = array[i++];
+        char3 = array[i++];
+        out += String.fromCharCode(
+          ((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0)
+        );
+        break;
+    }
   }
-  }
-
   return out;
+}
+
+/*
+  Simple cookie setter/getter - https://www.w3schools.com/js/js_cookies.asp
+*/
+
+function setCookie(cname, cvalue, exdays) {
+  const d = new Date();
+  d.setTime(d.getTime() + (exdays*24*60*60*1000));
+  let expires = "expires="+ d.toUTCString();
+  document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+function getCookie(cname) {
+  let name = cname + "=";
+  let decodedCookie = decodeURIComponent(document.cookie);
+  let ca = decodedCookie.split(';');
+  for(let i = 0; i <ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) == 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
 }

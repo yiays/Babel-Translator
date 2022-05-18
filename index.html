@@ -36,6 +36,8 @@
       <div class="parent">
         <a href="#" class="menubar-item" data-action="none">Help</a>
         <div class="dropdown">
+          <a href="#" class="menubar-item" data-action="show-welcome">Getting started</a>
+          <hr>
           <a href="https://github.com/yiays/Babel-Translator/blob/main/README.md" target="_blank" class="menubar-item">
             About
             <span class="menubar-item-symbols">&#8625;</span>
@@ -114,6 +116,43 @@
     </div>
 
     <div class="modal-bg hidden modal-cancel">
+      <div id="welcome" class="modal">
+        <div class="modal-header">
+          <h1>Welcome to Babel Translator!</h1>
+        </div>
+        <div class="modal-body">
+          <p>
+            Babel Translator is a web app that assists you with translating Babel-supported projects like
+            <a href="https://github.com/yiays/ConfessionBot-2.0" target="_blank">ConfessionBot</a> and
+            <a href="https://github.com/MerelyServices/Merely-Framework" target="_blank">MerelyBot</a>.
+            <i>With more to come soon!</i>
+          </p>
+          <h2>Getting started</h2>
+          <p>
+            Make sure you're in the <a href="https://discord.gg/wfKx24kDUR" target="_blank">Official Support Server</a>
+            and give yourself the translator role in <code>#volunteering</code>; this way you can ask for help in the <code>#translator-chat</code>.
+          </p>
+          <h3>Making changes</h3>
+          <p>
+            Select a project you want to contribute to first, then a language you can translate. This will become the active
+            project in this browser and any changes you make will be saved to this browser automatically.
+          </p>
+          <h3>Submitting changes</h3>
+          <p>
+            Save your work with <code>File > Save</code>. Afterwards, you can either send the downloaded INI file to
+            <code>#translator-chat</code>, or create a pull request in the relevant GitHub.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <input type="checkbox" id="block-welcome">
+          <label for="block-welcome" style="font-size:1rem;color:#ddd;text-transform:none;">Don't show this again</label>
+          <br><br>
+          <button class="btn modal-cancel">Dismiss</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg hidden modal-cancel">
       <form id="newlang" class="modal">
         <div class="modal-header">
           <h2>Create a new language/dialect</h2>
@@ -123,10 +162,16 @@
           <input type="text" id="newlangname" name="name" placeholder="English (US)" required>
           <br><label for="newlangcode">Language Code</label>
           <input type="text" id="newlangcode" name="lang" placeholder="en" required minlength="2" maxlength="3" style="width:3rem;">
-          <sub>A 2 letter code is prefered, a 3 letter code is also accepted. <a href="https://www.loc.gov/standards/iso639-2/php/code_list.php" target="_blank">Find your language code &gt;</a></sub>
+          <sub>
+            A 2 letter code is prefered, a 3 letter code is also accepted.
+            <a href="https://www.loc.gov/standards/iso639-2/php/code_list.php" target="_blank">Find your language code &gt;</a>
+          </sub>
           <br><label for="newlangcountry">Country Code (optional)</label>
           <input type="text" id="newlangcountry" name="country" placeholder="US" minlength="2" maxlength="3" style="width:3rem;">
-          <sub><b>Only provide a country code if this language is a dialect.</b> <a href="https://www.loc.gov/marc/countries/countries_code.html" target="_blank">Find your country code &gt;</a></sub>
+          <sub>
+            <b>Only provide a country code if this language is a dialect.</b>
+            <a href="https://www.loc.gov/marc/countries/countries_code.html" target="_blank">Find your country code &gt;</a>
+          </sub>
         </div>
         <div class="modal-footer">
           <input class="btn" type="submit" value="Create">
