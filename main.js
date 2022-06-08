@@ -34,6 +34,7 @@ if('TextDecoder' in window) {
   alert("This browser isn't supported!");
 }
 
+// Local Cache System
 if (!'localStorage' in window) {
   window.onbeforeunload = (e) => {
     if(Object.keys(changes).length) {
@@ -41,6 +42,15 @@ if (!'localStorage' in window) {
       return '';
     }
   }
+}
+
+// Service Worker Registration
+if (navigator.serviceWorker) {
+  navigator.serviceWorker
+  .register('/service-worker.js', {scope: '/'})
+  .catch(console.error)
+} else {
+  console.log('Service Worker is not supported in this browser.');
 }
 
 $().ready(() => {
@@ -53,7 +63,11 @@ $().ready(() => {
       setCookie('block-welcome', 1, 365);
     else
       setCookie('block-welcome', null, -1);
-  })
+  });
+
+  if(navigator.offline) {
+    offline_mode(true);
+  };
 
   $('body').on('click', '.menubar .menubar-item', (e) => {
     if(e.target.getAttribute('href') == '#') e.preventDefault();
@@ -74,6 +88,8 @@ $().ready(() => {
         }
         break;
       case 'select-project':
+        if(projects[e.target.dataset.id].langurl == null && !offline) return;
+
         if(Object.keys(changes).length && !confirm("You will lose changes to your translation. Continue?")) return;
         changes = {};
         window.localStorage.setItem('changes', '{}');
@@ -275,7 +291,7 @@ function update_projectlist() {
     const project = projects[i];
 
     $('.projectlist').append(`
-      <a href="#" class="menubar-item disabled" data-action="none" data-id=${i}>
+      <a href="#" class="menubar-item disabled" data-action="select-project" data-id=${i}>
         ${project.name}
       </a>
     `);
@@ -283,16 +299,16 @@ function update_projectlist() {
       if(project.name in langcache) {
         var projectentry = $(`.projectlist .menubar-item[data-id="${i}"]`);
         projectentry.removeClass('disabled');
-        projectentry.attr('data-action', 'select-project');
       }
     }else{
-      promises.push($.get(project.url, (treedata) => {
-        let babeltree = treedata.tree.find(tree => tree.path == 'babel');
-        projects[i].langurl = babeltree.url;
-        var projectentry = $(`.projectlist .menubar-item[data-id="${i}"]`);
-        projectentry.removeClass('disabled');
-        projectentry.attr('data-action', 'select-project');
-      }));
+      promises.push(
+        $.get(project.url, (treedata) => {
+          let babeltree = treedata.tree.find(tree => tree.path == 'babel');
+          projects[i].langurl = babeltree.url;
+          var projectentry = $(`.projectlist .menubar-item[data-id="${i}"]`);
+          projectentry.removeClass('disabled');
+        })
+      );
     }
   }
 
@@ -304,6 +320,8 @@ function update_projectlist() {
     }).catch((error) => {
       if(error.status == 403) {
         $('#github-timeout').parent().removeClass('hidden');
+      }else{
+        offline_mode(true);
       }
     });
   }else{
