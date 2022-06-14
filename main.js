@@ -582,15 +582,25 @@ function commit_changes(keep_changes=true) {
   if(currentlang && !Object.keys(project.langs).includes(currentlang)) {
     project.langs[currentlang] = {};
   }
+  let baselang = project.langs[project.base]
   let language = project.langs[currentlang];
+  let exportlang = {};
 
-  Object.entries(changes).forEach((change) => {
-    kv = change[0].split('/');
-    if(!Object.keys(language).includes(kv[0])) {
-      language[kv[0]] = {};
-    }
-    language[kv[0]][kv[1]] = change[1];
-  });
+  // Export keys in the same order as baselang
+  Object.keys(baselang).forEach((basesection) => {
+    exportlang[basesection] = {};
+    Object.keys(baselang[basesection]).forEach((basekey) => {
+      if(`${basesection}/${basekey}` in changes) {
+        exportlang[basesection][basekey] = changes[`${basesection}/${basekey}`];
+      }
+      else if(basesection in language && basekey in language[basesection]) {
+        exportlang[basesection][basekey] = language[basesection][basekey];
+      }
+    });
+  })
+
+  project.langs[currentlang] = exportlang;
+
   if(!keep_changes) {
     changes = {};
     window.localStorage.setItem('changes', '{}');
