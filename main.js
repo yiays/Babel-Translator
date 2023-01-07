@@ -402,6 +402,8 @@ function update_languagelist() {
         }).catch((error) => {
           if(error.status == 403) {
             $('#github-timeout').parent().removeClass('hidden');
+          }else{
+            offline_mode(true);
           }
         });
       }else{
