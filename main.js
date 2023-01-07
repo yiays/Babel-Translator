@@ -1,7 +1,7 @@
 let projects = [
   {
     name: "MerelyBot",
-    url: "https://api.github.com/repos/MerelyServices/Merely-Framework/git/trees/1.x",
+    url: "https://api.github.com/repos/MerelyServices/Merely-Framework/git/trees/beta",
     langurl: null,
     prefix: "",
     base: "en",
@@ -9,7 +9,7 @@ let projects = [
   },
   {
     name: "ConfessionBot",
-    url: "https://api.github.com/repos/yiays/ConfessionBot-2.0/git/trees/master",
+    url: "https://api.github.com/repos/yiays/ConfessionBot-2.0/git/trees/beta",
     langurl: null,
     prefix: "confessionbot_",
     base: "en",
