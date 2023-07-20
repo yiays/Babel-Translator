@@ -8,8 +8,7 @@ body {
   margin: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
+  height: 100vh;
 }
 
 .disabled > *,.dim {
@@ -90,7 +89,7 @@ nav h1 {
 }
 .menubar .menubar-item {
   display: inline-block;
-  padding: 0.5rem;
+  padding: 0.4rem 0.5rem;
   background: #505050;
   color: #ccc;
   text-decoration: none;
@@ -166,6 +165,7 @@ nav h1 {
   display: grid;
   grid-template-columns: 20rem 1fr;
   flex-grow: 1;
+  overflow: auto;
 }
 .editor .section {
   flex-direction: column;
